@@ -3,7 +3,12 @@ package com.example.server.service;
 import com.example.server.dto.AuthDto;
 import com.example.server.model.User;
 import com.example.server.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,11 +19,15 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
 
     @Transactional
     public AuthDto.AuthResponse signup(AuthDto.SignupRequest request) {
+
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new IllegalArgumentException("Username '" + request.getUsername() + "' is already taken");
+            throw new IllegalArgumentException(
+                    "Username '" + request.getUsername() + "' is already taken"
+            );
         }
 
         User user = new User();
@@ -29,26 +38,45 @@ public class AuthService {
 
         if (request.getRole() == User.Role.CAREGIVER && request.getPatientId() != null) {
             User patient = userRepository.findById(request.getPatientId())
-                    .orElseThrow(() -> new IllegalArgumentException("Patient not found with id: " + request.getPatientId()));
+                    .orElseThrow(() ->
+                            new IllegalArgumentException("Patient not found with id: " + request.getPatientId())
+                    );
 
             if (patient.getRole() != User.Role.USER) {
-                throw new IllegalArgumentException("The linked patient_id must belong to a USER role account");
+                throw new IllegalArgumentException(
+                        "The linked patient_id must belong to a USER role account"
+                );
             }
+
             user.setPatient(patient);
         }
 
         User saved = userRepository.save(user);
+
         return new AuthDto.AuthResponse(saved, "Registration successful");
     }
 
     public AuthDto.AuthResponse login(AuthDto.LoginRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid username or password");
-        }
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found")
+                );
 
         return new AuthDto.AuthResponse(user, "Login successful");
+    }
+
+    public void logout(HttpServletRequest request) throws Exception {
+        request.logout();
+        SecurityContextHolder.clearContext();
     }
 }

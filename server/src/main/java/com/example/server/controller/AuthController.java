@@ -1,12 +1,13 @@
 package com.example.server.controller;
 
-
 import com.example.server.dto.AuthDto;
 import com.example.server.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,7 +23,9 @@ public class AuthController {
             AuthDto.AuthResponse response = authService.signup(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new AuthDto.ErrorResponse(e.getMessage()));
+            return ResponseEntity
+                    .badRequest()
+                    .body(new AuthDto.ErrorResponse(e.getMessage()));
         }
     }
 
@@ -38,11 +41,32 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        try {
+            authService.logout(request);
+            return ResponseEntity.ok("Logged out successfully");
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthDto.ErrorResponse("Logout failed"));
+        }
+    }
 
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(
-            org.springframework.security.core.Authentication authentication) {
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDto.ErrorResponse("Not authenticated"));
+        }
+
         String username = authentication.getName();
-        return ResponseEntity.ok("Authenticated as: " + username + " | Roles: " + authentication.getAuthorities());
+
+        return ResponseEntity.ok(
+                "Authenticated as: " + username +
+                        " | Roles: " + authentication.getAuthorities()
+        );
     }
 }
