@@ -36,7 +36,18 @@ public class AuthService {
         user.setRole(request.getRole());
         user.setFullName(request.getFullName());
 
-        if (request.getRole() == User.Role.CAREGIVER && request.getPatientId() != null) {
+        if (request.getRole() == User.Role.USER) {
+            if (request.getDementiaStage() == null) {
+                throw new IllegalArgumentException("Dementia stage (1 or 2) is required for USER accounts");
+            }
+            user.setDementiaStage(request.getDementiaStage());
+        }
+
+        if (request.getRole() == User.Role.CAREGIVER) {
+            if (request.getPatientId() == null) {
+                throw new IllegalArgumentException("A patient ID is required when registering as a caretaker");
+            }
+
             User patient = userRepository.findById(request.getPatientId())
                     .orElseThrow(() ->
                             new IllegalArgumentException("Patient not found with id: " + request.getPatientId())
@@ -44,7 +55,7 @@ public class AuthService {
 
             if (patient.getRole() != User.Role.USER) {
                 throw new IllegalArgumentException(
-                        "The linked patient_id must belong to a USER role account"
+                        "The linked patient_id must belong to a USER (patient) role account"
                 );
             }
 
@@ -52,7 +63,6 @@ public class AuthService {
         }
 
         User saved = userRepository.save(user);
-
         return new AuthDto.AuthResponse(saved, "Registration successful");
     }
 
@@ -68,9 +78,7 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() ->
-                        new IllegalArgumentException("User not found")
-                );
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         return new AuthDto.AuthResponse(user, "Login successful");
     }

@@ -1,14 +1,10 @@
 package com.example.server.dto;
 
-
 import com.example.server.model.User;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.util.UUID;
-
 
 public class AuthDto {
 
@@ -27,6 +23,9 @@ public class AuthDto {
 
         @Size(max = 100)
         private String fullName;
+        @Min(value = 1, message = "Dementia stage must be 1 or 2")
+        @Max(value = 2, message = "Dementia stage must be 1 or 2")
+        private Integer dementiaStage;
 
         private UUID patientId;
     }
@@ -40,13 +39,13 @@ public class AuthDto {
         private String password;
     }
 
-
     @Data
     public static class AuthResponse {
         private UUID id;
         private String username;
         private String fullName;
         private User.Role role;
+        private Integer dementiaStage;
         private String message;
 
         public AuthResponse(User user, String message) {
@@ -54,6 +53,7 @@ public class AuthDto {
             this.username = user.getUsername();
             this.fullName = user.getFullName();
             this.role = user.getRole();
+            this.dementiaStage = user.getDementiaStage();
             this.message = message;
         }
     }

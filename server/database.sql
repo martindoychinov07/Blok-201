@@ -7,6 +7,7 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL CHECK (role IN ('USER', 'CAREGIVER')),
     full_name VARCHAR(100),
+    dementia_stage INT CHECK (dementia_stage IN (1, 2)),
     patient_id UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
