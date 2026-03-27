@@ -46,31 +46,19 @@ function renderCalendar() {
         const hasEvent   = events[key] && events[key].length > 0;
 
         let cls = 'cal-day';
-
-        if (isToday) {
-            cls += ' today';
-        } else if (isPast) {
-            cls += ' past';
-        } else if (isSelected) {
-            cls += ' selected';
-        }
-
-        if (hasEvent) {
-            cls += ' has-event';
-        }
+        if (isToday) cls += ' today';
+        else if (isPast) cls += ' past';
+        else if (isSelected) cls += ' selected';
+        if (hasEvent) cls += ' has-event';
 
         cell.className   = cls;
         cell.textContent = d;
 
         if (!isPast) {
-            cell.onclick = function () {
-                selectDate(date);
-            };
+            cell.onclick = function () { selectDate(date); };
         }
-
         grid.appendChild(cell);
     }
-
     renderEvents();
 }
 
@@ -80,9 +68,10 @@ function selectDate(date) {
 }
 
 function renderEvents() {
-    if (!calSelected) {
-        return;
-    }
+    if (!calSelected) return;
+
+    const isStage2 = currentUser.role === 'USER' && currentUser.dementiaStage === 2;
+    const canEdit  = currentUser.role === 'CAREGIVER' || !isStage2;
 
     const key    = dateKey(calSelected);
     const events = loadEvents();
@@ -90,15 +79,21 @@ function renderEvents() {
     const label  = MONTHS[calSelected.getMonth()] + ' ' + calSelected.getDate() + ', ' + calSelected.getFullYear();
 
     document.getElementById('calEventsDate').textContent = label;
-
     const el = document.getElementById('calEventsList');
     el.innerHTML = '';
 
     const today  = new Date();
     const isPast = !sameDay(calSelected, today) && calSelected < today;
 
-    document.getElementById('calAdd').classList.toggle('hidden', isPast);
-    document.getElementById('calPastNotice').style.display = isPast ? 'block' : 'none';
+    document.getElementById('calAdd').classList.toggle('hidden', isPast || !canEdit);
+
+    const notice = document.getElementById('calPastNotice');
+    if (isStage2) {
+        notice.textContent = "View-only mode for Stage 2.";
+        notice.style.display = 'block';
+    } else {
+        notice.style.display = isPast ? 'block' : 'none';
+    }
 
     if (list.length === 0) {
         const empty = document.createElement('div');
@@ -109,19 +104,19 @@ function renderEvents() {
     }
 
     list.forEach(function (ev, idx) {
-        const timeHtml = ev.time
-            ? '<br/><span class="event-time">' + formatTime(ev.time) + '</span>'
-            : '';
-
+        const timeHtml = ev.time ? '<br/><span class="event-time">' + formatTime(ev.time) + '</span>' : '';
         const row = document.createElement('div');
         row.className = 'event-item';
+
+        const delBtn = canEdit
+            ? '<button class="event-del" title="Remove" onclick="removeEvent(\'' + key + '\', ' + idx + ')">&#215;</button>'
+            : '';
+
         row.innerHTML =
-            '<div class="event-left">'                                               +
-                '<div class="event-dot"></div>'                                      +
-                '<div class="event-text">' + ev.text + timeHtml + '</div>'           +
-            '</div>'                                                                  +
-            '<button class="event-del" title="Remove"'                               +
-                ' onclick="removeEvent(\'' + key + '\', ' + idx + ')">&#215;</button>';
+            '<div class="event-left">' +
+                '<div class="event-dot"></div>' +
+                '<div class="event-text">' + ev.text + timeHtml + '</div>' +
+            '</div>' + delBtn;
 
         el.appendChild(row);
     });

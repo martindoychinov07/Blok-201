@@ -41,20 +41,33 @@ public class AuthDto {
 
     @Data
     public static class AuthResponse {
-        private UUID id;
+        private UUID   id;
         private String username;
+        private String password;
         private String fullName;
         private User.Role role;
         private Integer dementiaStage;
+        private UUID   patientId;
+        private String patientUsername;
         private String message;
 
         public AuthResponse(User user, String message) {
-            this.id = user.getId();
-            this.username = user.getUsername();
-            this.fullName = user.getFullName();
-            this.role = user.getRole();
-            this.dementiaStage = user.getDementiaStage();
-            this.message = message;
+            this.id             = user.getId();
+            this.username       = user.getUsername();
+            this.fullName       = user.getFullName();
+            this.role           = user.getRole();
+            this.dementiaStage  = user.getDementiaStage();
+            this.message        = message;
+
+            if (user.getPatient() != null) {
+                this.patientId       = user.getPatient().getId();
+                this.patientUsername = user.getPatient().getUsername();
+            }
+        }
+
+        public AuthResponse(User user, String message, String rawPassword) {
+            this(user, message);
+            this.password = rawPassword;
         }
     }
 

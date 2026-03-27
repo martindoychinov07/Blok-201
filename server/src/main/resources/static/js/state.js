@@ -14,8 +14,19 @@ let calSelected   = null;
 let notifInterval = null;
 let firedToday    = new Set();
 
+let stompClient   = null;
+let sensorSub     = null;
+
 function lsKey() {
-    return 'daid_cal_' + (currentUser ? currentUser.id : 'anon');
+    if (!currentUser) {
+        return 'daid_cal_anon';
+    }
+
+    if (currentUser.role === 'CAREGIVER' && currentUser.patientId) {
+        return 'daid_cal_' + currentUser.patientId;
+    }
+
+    return 'daid_cal_' + (currentUser.id || 'anon');
 }
 
 function loadEvents() {
@@ -50,9 +61,7 @@ function sameDay(a, b) {
 }
 
 function formatTime(t) {
-    if (!t) {
-        return '';
-    }
+    if (!t) { return ''; }
     const parts = t.split(':').map(Number);
     const h     = parts[0];
     const m     = parts[1];

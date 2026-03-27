@@ -13,7 +13,7 @@ function switchTab(tab) {
 
 function clearMsgs() {
     document.querySelectorAll('.msg').forEach(function (m) {
-        m.className  = 'msg';
+        m.className   = 'msg';
         m.textContent = '';
     });
 }
@@ -26,8 +26,8 @@ function showMsg(id, text, type) {
 
 function onRoleChange() {
     const role = document.getElementById('sRole').value;
-    document.getElementById('stageWrap').classList.toggle('visible',  role === 'USER');
-    document.getElementById('patientWrap').classList.toggle('visible', role === 'CARETAKER');
+    document.getElementById('stageWrap').classList.toggle('visible',   role === 'USER');
+    document.getElementById('patientWrap').classList.toggle('visible',  role === 'CAREGIVER');
 }
 
 function selectStage(n) {
@@ -66,12 +66,11 @@ async function doLogin(btn) {
         enterDashboard(data);
     } catch (err) {
         console.error('Login request failed:', err);
-
-        if (!navigator.onLine) {
-            showMsg('lMsg', 'You appear to be offline. Please check your connection and try again.', 'err');
-        } else {
-            showMsg('lMsg', 'Could not reach the server. Please try again in a moment.', 'err');
-        }
+        showMsg('lMsg',
+            navigator.onLine
+                ? 'Could not reach the server. Please try again in a moment.'
+                : 'You appear to be offline. Please check your connection.',
+            'err');
     } finally {
         btn.disabled    = false;
         btn.textContent = 'Sign In';
@@ -95,25 +94,15 @@ async function doSignup(btn) {
         return;
     }
 
-    if (role === 'CARETAKER' && !patientId) {
+    if (role === 'CAREGIVER' && !patientId) {
         showMsg('sMsg', 'Patient UUID is required for caretaker accounts.', 'err');
         return;
     }
 
-    const body = {
-        username,
-        password,
-        role,
-        fullName: fullName || null
-    };
+    const body = { username, password, role, fullName: fullName || null };
 
-    if (role === 'USER') {
-        body.dementiaStage = selectedStage;
-    }
-
-    if (role === 'CARETAKER') {
-        body.patientId = patientId;
-    }
+    if (role === 'USER')      { body.dementiaStage = selectedStage; }
+    if (role === 'CAREGIVER') { body.patientId     = patientId; }
 
     btn.disabled    = true;
     btn.textContent = 'Creating account…';
@@ -133,18 +122,15 @@ async function doSignup(btn) {
             return;
         }
 
-        showMsg('sMsg', 'Account created. Signing you in…', 'ok');
-        setTimeout(function () {
-            enterDashboard(data);
-        }, 800);
+        showMsg('sMsg', 'Account created! Entering dashboard…', 'ok');
+        setTimeout(function () { enterDashboard(data); }, 600);
     } catch (err) {
         console.error('Signup request failed:', err);
-
-        if (!navigator.onLine) {
-            showMsg('sMsg', 'You appear to be offline. Please check your connection and try again.', 'err');
-        } else {
-            showMsg('sMsg', 'Could not reach the server. Please try again in a moment.', 'err');
-        }
+        showMsg('sMsg',
+            navigator.onLine
+                ? 'Could not reach the server. Please try again in a moment.'
+                : 'You appear to be offline. Please check your connection.',
+            'err');
     } finally {
         btn.disabled    = false;
         btn.textContent = 'Create Account';
@@ -153,6 +139,7 @@ async function doSignup(btn) {
 
 async function doLogout() {
     stopReminderLoop();
+    disconnectWebSocket();
 
     try {
         await fetch(API + '/api/auth/logout', {
@@ -160,19 +147,22 @@ async function doLogout() {
             credentials: 'include'
         });
     } catch (err) {
-        console.warn('Logout request failed, clearing session locally anyway:', err);
+        console.warn('Logout request failed; clearing session locally:', err);
     }
 
     currentUser = null;
 
+    ['credentialsCard', 'userIdCard', 'sensorPanel'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) { el.remove(); }
+    });
+
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('authPage').style.display  = 'flex';
 
-    ['lUser', 'lPass', 'sName', 'sUser', 'sPass', 'sPatientId'].forEach(function (id) {
+    ['lUser','lPass','sName','sUser','sPass','sPatientId'].forEach(function (id) {
         const el = document.getElementById(id);
-        if (el) {
-            el.value = '';
-        }
+        if (el) { el.value = ''; }
     });
 
     document.getElementById('sRole').value = '';

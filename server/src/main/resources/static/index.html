@@ -17,8 +17,8 @@
         <div class="auth-left">
             <div class="logo">Dementia<span>Aid</span></div>
             <div class="auth-hero">
-                <h1>Gentle care for <em>every</em> stage.</h1>
-                <p>Supporting people living with early-stage dementia, and the caretakers who walk alongside them.</p>
+                <h1>Gentle care for people with demencia</h1>
+                <p>Supporting people living with early-stage dementia, and the caregivers who walk alongside them.</p>
             </div>
             <div class="auth-pills">
                 <div class="auth-pill">
@@ -27,7 +27,7 @@
                 </div>
                 <div class="auth-pill">
                     <div class="pill-dot s2"></div>
-                    <div><strong>Stage 2</strong> — Key actions handled by a trusted caretaker.</div>
+                    <div><strong>Stage 2</strong> — Key actions handled by a trusted caregivers.</div>
                 </div>
             </div>
         </div>
@@ -55,7 +55,7 @@
 
             <div id="signupSection" class="form-section">
                 <div class="form-title">Create account</div>
-                <div class="form-sub">Join DementiaAid as a patient or caretaker</div>
+                <div class="form-sub">Join DementiaAid as a caretaker or caregiver</div>
                 <div class="field">
                     <label>Full Name</label>
                     <input type="text" id="sName" placeholder="Jane Doe" />
@@ -72,8 +72,8 @@
                     <label>I am a <span class="req">*</span></label>
                     <select id="sRole" onchange="onRoleChange()">
                         <option value="">— select role —</option>
-                        <option value="USER">Patient</option>
-                        <option value="CARETAKER">Caretaker</option>
+                        <option value="USER">Caretaker</option>
+                        <option value="CAREGIVER">Caregiver</option>
                     </select>
                 </div>
                 <div class="stage-wrap" id="stageWrap">
@@ -90,7 +90,7 @@
                     </div>
                 </div>
                 <div class="patient-wrap" id="patientWrap">
-                    <label>Patient UUID <span class="req">*</span></label>
+                    <label>Your UUID <span class="req">*</span></label>
                     <input type="text" id="sPatientId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
                 </div>
                 <button class="btn-primary" onclick="doSignup(this)">Create Account</button>
@@ -165,6 +165,9 @@
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
 <script src="js/state.js"></script>
 <script src="js/notifications.js"></script>
