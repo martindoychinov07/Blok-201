@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dementia Edge Dashboard</title>
+    <style>
+      :root {
+        --bg: #f3f5f7;
+        --surface: #ffffff;
+        --text: #1e242a;
+        --muted: #68727d;
+        --critical: #c0392b;
+        --warning: #d98f00;
+        --info: #2c7da0;
+        --ok: #1f8a5b;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(140deg, #edf2f7 0%, #f8fafc 55%, #edf1f5 100%);
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .title {
+        font-size: 28px;
+        margin: 0 0 8px;
+      }
+      .subtitle {
+        margin: 0 0 20px;
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--surface);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 4px 18px rgba(25, 30, 40, 0.08);
+      }
+      .card h3 {
+        margin: 0 0 12px;
+      }
+      .item {
+        border-left: 4px solid var(--info);
+        background: #f8fafb;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 8px;
+      }
+      .item.warning {
+        border-left-color: var(--warning);
+      }
+      .item.critical {
+        border-left-color: var(--critical);
+      }
+      .item.info {
+        border-left-color: var(--info);
+      }
+      .item .meta {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 12px;
+        border-radius: 999px;
+        padding: 2px 8px;
+        background: #e7eef2;
+      }
+      .badge.critical {
+        background: #fdecea;
+        color: var(--critical);
+      }
+      .badge.warning {
+        background: #fff3df;
+        color: #8a5a00;
+      }
+      .badge.info {
+        background: #e8f4fa;
+        color: var(--info);
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+      .status {
+        margin-bottom: 14px;
+      }
+      .status span {
+        color: var(--ok);
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .controls label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .controls input,
+      textarea,
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cfd8de;
+        border-radius: 8px;
+        padding: 8px;
+        font: inherit;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font: inherit;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+      .btn-primary {
+        background: #1f8a5b;
+        color: #fff;
+      }
+      .btn-stop {
+        background: #c0392b;
+        color: #fff;
+      }
+      .btn-muted {
+        background: #e9eff3;
+        color: #1e242a;
+      }
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        background: #e9f8f0;
+        color: #1f8a5b;
+        font-size: 12px;
+        padding: 3px 8px;
+      }
+      .pill.off {
+        background: #fdecea;
+        color: #c0392b;
+      }
+      .transcript-log {
+        max-height: 180px;
+        overflow: auto;
+      }
+      @media (max-width: 640px) {
+        .controls {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1 class="title">Dementia Edge Dashboard</h1>
+      <p class="subtitle">Live speech ingest, memory extraction, reminders, and safety alerts</p>
+      <p class="status">WebSocket: <span id="ws-status">connecting...</span></p>
+
+      <section class="grid">
+        <article class="card">
+          <h3>Live Mic Ingest</h3>
+          <div class="controls">
+            <div>
+              <label for="patient-id">Patient ID</label>
+              <input id="patient-id" value="patient-001" />
+            </div>
+            <div>
+              <label for="device-id">Device ID</label>
+              <input id="device-id" value="pc-mic-001" />
+            </div>
+            <div>
+              <label for="device-key">Device Key</label>
+              <input id="device-key" value="dev-ingest-key" />
+            </div>
+            <div>
+              <label for="language">Mic Language</label>
+              <input id="language" value="en-US" />
+            </div>
+            <div>
+              <label for="pause-seconds">Pause flush (sec)</label>
+              <input id="pause-seconds" type="number" min="1" max="20" value="5" />
+            </div>
+          </div>
+          <div class="actions">
+            <button id="start-mic" class="btn-primary">Start Listening</button>
+            <button id="stop-mic" class="btn-stop">Stop</button>
+            <span id="mic-state" class="pill off">mic idle</span>
+          </div>
+          <div id="mic-note" class="meta">Browser STT sends final transcript chunks to backend in real time.</div>
+          <div class="actions" style="margin-top: 8px;">
+            <button id="run-diagnostics" class="btn-muted">Run Mic Diagnostics</button>
+          </div>
+          <div id="mic-diagnostics" class="meta"></div>
+          <div id="transcript-log" class="transcript-log"></div>
+        </article>
+
+        <article class="card">
+          <h3>Remember Something</h3>
+          <textarea id="remember-text" rows="4" placeholder="Type an important note to remember..."></textarea>
+          <div class="controls" style="margin-top: 8px;">
+            <div>
+              <label for="remember-priority">Priority</label>
+              <select id="remember-priority">
+                <option value="low">low</option>
+                <option value="medium" selected>medium</option>
+                <option value="high">high</option>
+              </select>
+            </div>
+            <div>
+              <label for="remember-due">Due (optional ISO datetime)</label>
+              <input id="remember-due" placeholder="2026-03-27T09:30:00+02:00" />
+            </div>
+          </div>
+          <div class="actions">
+            <button id="save-note" class="btn-primary">Save Note</button>
+            <button id="save-reminder" class="btn-muted">Save as Reminder</button>
+          </div>
+          <div id="remember-status" class="meta"></div>
+        </article>
+
+        <article class="card">
+          <h3>Live Alerts</h3>
+          <div id="alerts"></div>
+        </article>
+
+        <article class="card">
+          <h3>Events</h3>
+          <div id="events"></div>
+        </article>
+
+        <article class="card">
+          <h3>Reminders</h3>
+          <div class="controls" style="grid-template-columns: 1fr; margin-bottom: 8px;">
+            <div>
+              <label for="reminder-status">Reminder status view</label>
+              <select id="reminder-status">
+                <option value="active" selected>active</option>
+                <option value="all">all</option>
+                <option value="done">done</option>
+                <option value="cancelled">cancelled</option>
+                <option value="stale">stale</option>
+              </select>
+            </div>
+          </div>
+          <div id="reminders"></div>
+        </article>
+
+        <article class="card">
+          <h3>Memory Facts</h3>
+          <div id="memory"></div>
+        </article>
+
+        <article class="card">
+          <h3>Patient Context</h3>
+          <div id="context"></div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const alertsEl = document.getElementById("alerts");
+      const eventsEl = document.getElementById("events");
+      const remindersEl = document.getElementById("reminders");
+      const memoryEl = document.getElementById("memory");
+      const contextEl = document.getElementById("context");
+      const wsStatusEl = document.getElementById("ws-status");
+      const transcriptLogEl = document.getElementById("transcript-log");
+      const diagnosticsEl = document.getElementById("mic-diagnostics");
+
+      const patientInput = document.getElementById("patient-id");
+      const deviceInput = document.getElementById("device-id");
+      const keyInput = document.getElementById("device-key");
+      const languageInput = document.getElementById("language");
+      const micState = document.getElementById("mic-state");
+
+      const rememberText = document.getElementById("remember-text");
+      const rememberPriority = document.getElementById("remember-priority");
+      const rememberDue = document.getElementById("remember-due");
+      const rememberStatus = document.getElementById("remember-status");
+      const reminderStatusFilter = document.getElementById("reminder-status");
+      const pauseSecondsInput = document.getElementById("pause-seconds");
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let keepListening = false;
+      let isRecognitionRunning = false;
+      let restartTimer = null;
+      let silenceFlushTimer = null;
+      let hasUnflushedSpeech = false;
+      let restartAttempts = 0;
+      const RECOVERABLE_ERRORS = new Set(["no-speech", "aborted", "network", "audio-capture"]);
+
+      function currentPatientId() {
+        return patientInput.value.trim() || "patient-001";
+      }
+
+      function currentDeviceId() {
+        return deviceInput.value.trim() || "pc-mic-001";
+      }
+
+      function currentDeviceKey() {
+        return keyInput.value.trim() || "dev-ingest-key";
+      }
+
+      function pushTranscriptLine(text) {
+        const ts = new Date().toLocaleTimeString();
+        const row = document.createElement("div");
+        row.className = "item info";
+        row.innerHTML = `<strong>${ts}</strong><div>${text}</div>`;
+        transcriptLogEl.prepend(row);
+      }
+
+      function diagLine(ok, text) {
+        const color = ok ? "#1f8a5b" : "#c0392b";
+        return `<div style='color:${color}'>${ok ? "OK" : "FAIL"}: ${text}</div>`;
+      }
+
+      async function runMicDiagnostics() {
+        const checks = [];
+        const secureAllowed = window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+        checks.push(diagLine(secureAllowed, `Secure context (${location.origin})`));
+
+        const hasSpeech = Boolean(SpeechRecognition);
+        checks.push(diagLine(hasSpeech, "SpeechRecognition API available"));
+
+        const hasMediaDevices = Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        checks.push(diagLine(hasMediaDevices, "getUserMedia available"));
+
+        if (navigator.permissions && navigator.permissions.query) {
+          try {
+            const p = await navigator.permissions.query({ name: "microphone" });
+            checks.push(diagLine(p.state !== "denied", `Microphone permission: ${p.state}`));
+          } catch (_err) {
+            checks.push(diagLine(true, "Microphone permission query not supported"));
+          }
+        }
+
+        checks.push(`<div>Browser: ${navigator.userAgent}</div>`);
+        diagnosticsEl.innerHTML = checks.join("");
+      }
+
+      function triggerBackgroundRefresh() {
+        Promise.all([refreshMemory(), refreshEvents(), refreshReminders(), refreshContext(), refreshAlerts()]).catch(() => {});
+      }
+
+      function getPauseSeconds() {
+        const raw = Number(pauseSecondsInput.value || "5");
+        if (!Number.isFinite(raw)) {
+          return 5;
+        }
+        return Math.max(1, Math.min(20, Math.floor(raw)));
+      }
+
+      async function sendTranscript(text = null, flush = false) {
+        const payload = {
+          patient_id: currentPatientId(),
+          device_id: currentDeviceId(),
+          stt_engine: "browser-web-speech",
+          stt_confidence: 0.8,
+          flush
+        };
+        if (text && text.trim()) {
+          payload.text = text.trim();
+        }
+        const res = await fetch("/ingest/transcript", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Device-Key": currentDeviceKey()
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(msg || `ingest failed: ${res.status}`);
+        }
+        const data = await res.json();
+        if (text && text.trim()) {
+          pushTranscriptLine(text.trim());
+        }
+        return data;
+      }
+
+      function renderAlertRow(alert) {
+        const severity = alert.severity || "info";
+        return `
+          <div class="item ${severity}">
+            <div class="row">
+              <strong>${alert.title || alert.alert_type || "Alert"}</strong>
+              <span class="badge ${severity}">${severity}</span>
+            </div>
+            <div>${alert.message || ""}</div>
+            <div class="meta">${alert.triggered_at || "now"}</div>
+          </div>
+        `;
+      }
+
+      async function refreshAlerts() {
+        const res = await fetch(`/alerts?patient_id=${currentPatientId()}&limit=30`);
+        const rows = await res.json();
+        alertsEl.innerHTML = rows.map(renderAlertRow).join("") || "<div class='meta'>No alerts yet.</div>";
+      }
+
+      async function refreshEvents() {
+        const res = await fetch(`/patients/${currentPatientId()}/events?limit=20`);
+        const rows = await res.json();
+        eventsEl.innerHTML = rows
+          .map(
+            (e) => `<div class='item info'>
+              <strong>${e.title || "event"}</strong>
+              <div>${e.details || ""}</div>
+              <div class='meta'>source: ${e.source} | due: ${e.due_at || "n/a"} | recurrence: ${e.recurrence_rule || "none"}</div>
+            </div>`
+          )
+          .join("") || "<div class='meta'>No events yet.</div>";
+      }
+
+      async function refreshReminders() {
+        const status = reminderStatusFilter.value || "active";
+        const res = await fetch(`/patients/${currentPatientId()}/reminders?status=${encodeURIComponent(status)}&limit=50`);
+        const rows = await res.json();
+        remindersEl.innerHTML = rows
+          .map((r) => {
+            const canUpdate = r.status === "active";
+            const actionButtons = canUpdate
+              ? `<div class='actions' style='margin-top: 6px;'>
+                   <button class='btn-primary' data-reminder-action='done' data-reminder-id='${r.id}'>Mark done</button>
+                   <button class='btn-muted' data-reminder-action='cancelled' data-reminder-id='${r.id}'>Cancel</button>
+                 </div>`
+              : "";
+            return `<div class='item warning'>
+              <strong>${r.title}</strong>
+              <div>${r.details || ""}</div>
+              <div class='meta'>status: ${r.status} | priority: ${r.priority} | due: ${r.due_at || "n/a"} | recurrence: ${r.recurrence_rule || "none"}</div>
+              ${actionButtons}
+            </div>`;
+          })
+          .join("") || "<div class='meta'>No active reminders.</div>";
+      }
+
+      async function updateReminderStatus(reminderId, status) {
+        const res = await fetch(`/patients/${currentPatientId()}/reminders/${reminderId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status })
+        });
+        if (!res.ok) {
+          return;
+        }
+        await Promise.all([refreshEvents(), refreshReminders(), refreshContext()]);
+      }
+
+      async function refreshMemory() {
+        const res = await fetch(`/patients/${currentPatientId()}/memory?limit=20`);
+        const rows = await res.json();
+        memoryEl.innerHTML = rows
+          .map((r) => `<div class='item info'><strong>${r.predicate}</strong><div>${r.object_value}</div><div class='meta'>confidence: ${Number(r.confidence).toFixed(2)}</div></div>`)
+          .join("") || "<div class='meta'>No memory facts yet.</div>";
+      }
+
+      async function refreshContext() {
+        const res = await fetch(`/patients/${currentPatientId()}/context`);
+        const ctx = await res.json();
+        const people = (ctx.important_people || []).map((p) => p.name).join(", ") || "none";
+        const reminders = (ctx.active_reminders || []).length;
+        const risks = (ctx.active_risks || []).length;
+        contextEl.innerHTML = `
+          <div class='item info'><strong>Important people:</strong> ${people}</div>
+          <div class='item warning'><strong>Active reminders:</strong> ${reminders}</div>
+          <div class='item critical'><strong>Active risks:</strong> ${risks}</div>
+        `;
+      }
+
+      function setMicState(listening) {
+        if (listening) {
+          micState.textContent = "mic listening";
+          micState.classList.remove("off");
+        } else {
+          micState.textContent = "mic idle";
+          micState.classList.add("off");
+        }
+      }
+
+      async function ensureMicPermission(noteEl) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          return true;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((t) => t.stop());
+          return true;
+        } catch (err) {
+          noteEl.textContent = `Mic permission error: ${err?.message || String(err)}`;
+          return false;
+        }
+      }
+
+      function initMicControls() {
+        const startBtn = document.getElementById("start-mic");
+        const stopBtn = document.getElementById("stop-mic");
+        const noteEl = document.getElementById("mic-note");
+        const runDiagBtn = document.getElementById("run-diagnostics");
+
+        const secureAllowed =
+          window.isSecureContext ||
+          location.hostname === "localhost" ||
+          location.hostname === "127.0.0.1";
+
+        if (!SpeechRecognition) {
+          noteEl.textContent = "SpeechRecognition API is not available in this browser. Use Chrome/Edge.";
+          startBtn.disabled = true;
+          stopBtn.disabled = true;
+          runDiagBtn.addEventListener("click", runMicDiagnostics);
+          runMicDiagnostics();
+          return;
+        }
+
+        if (!secureAllowed) {
+          noteEl.textContent = "Mic STT may be blocked on non-HTTPS origin. Use https or open from localhost.";
+        }
+        runDiagBtn.addEventListener("click", runMicDiagnostics);
+        runMicDiagnostics();
+
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        async function startRecognition(forcePermissionCheck = false) {
+          if (!recognition || isRecognitionRunning) {
+            return;
+          }
+          if (forcePermissionCheck) {
+            noteEl.textContent = "Starting microphone...";
+            const granted = await ensureMicPermission(noteEl);
+            if (!granted) {
+              keepListening = false;
+              setMicState(false);
+              return;
+            }
+          }
+          try {
+            recognition.lang = languageInput.value.trim() || "en-US";
+            recognition.start();
+          } catch (err) {
+            noteEl.textContent = `Start failed: ${err?.message || String(err)}`;
+            if (keepListening) {
+              scheduleRestart("start-failed", noteEl);
+            }
+            return;
+          }
+        }
+
+        function scheduleRestart(reason, noteNode) {
+          if (!keepListening) {
+            return;
+          }
+          if (restartTimer) {
+            clearTimeout(restartTimer);
+            restartTimer = null;
+          }
+          restartAttempts += 1;
+          const delay = Math.min(4000, 400 + restartAttempts * 300);
+          noteNode.textContent = `Mic reconnect (${reason}) in ${delay}ms...`;
+          restartTimer = setTimeout(async () => {
+            restartTimer = null;
+            await startRecognition(false);
+          }, delay);
+        }
+
+        async function flushNow() {
+          if (!hasUnflushedSpeech) {
+            return;
+          }
+          try {
+            await sendTranscript(null, true);
+            hasUnflushedSpeech = false;
+            triggerBackgroundRefresh();
+          } catch (err) {
+            noteEl.textContent = `Flush failed: ${String(err)}`;
+          }
+        }
+
+        function schedulePauseFlush() {
+          if (silenceFlushTimer) {
+            clearTimeout(silenceFlushTimer);
+            silenceFlushTimer = null;
+          }
+          const delayMs = getPauseSeconds() * 1000;
+          silenceFlushTimer = setTimeout(async () => {
+            silenceFlushTimer = null;
+            await flushNow();
+          }, delayMs);
+        }
+
+        startBtn.addEventListener("click", async () => {
+          keepListening = true;
+          if (silenceFlushTimer) {
+            clearTimeout(silenceFlushTimer);
+            silenceFlushTimer = null;
+          }
+          await startRecognition(true);
+        });
+
+        stopBtn.addEventListener("click", () => {
+          keepListening = false;
+          if (restartTimer) {
+            clearTimeout(restartTimer);
+            restartTimer = null;
+          }
+          if (silenceFlushTimer) {
+            clearTimeout(silenceFlushTimer);
+            silenceFlushTimer = null;
+          }
+          restartAttempts = 0;
+          flushNow();
+          try {
+            recognition.stop();
+          } catch (_err) {
+            setMicState(false);
+          }
+        });
+
+        recognition.onstart = () => {
+          isRecognitionRunning = true;
+          restartAttempts = 0;
+          setMicState(true);
+          noteEl.textContent = "Listening (always-on mode)... final transcript chunks are sent live to backend.";
+        };
+
+        recognition.onend = () => {
+          isRecognitionRunning = false;
+          if (keepListening) {
+            scheduleRestart("session-ended", noteEl);
+            return;
+          }
+          setMicState(false);
+        };
+
+        recognition.onerror = (event) => {
+          noteEl.textContent = `Mic error: ${event.error}`;
+          if (["not-allowed", "service-not-allowed", "audio-capture"].includes(event.error)) {
+            keepListening = false;
+          } else if (keepListening && RECOVERABLE_ERRORS.has(event.error)) {
+            scheduleRestart(event.error, noteEl);
+          }
+          setMicState(false);
+        };
+
+        recognition.onresult = async (event) => {
+          const finalTexts = [];
+          let interimText = "";
+          for (let i = event.resultIndex; i < event.results.length; i += 1) {
+            const r = event.results[i];
+            const t = r[0].transcript.trim();
+            if (!t) {
+              continue;
+            }
+            if (r.isFinal) {
+              finalTexts.push(t);
+            } else {
+              interimText += ` ${t}`;
+            }
+          }
+
+          if (interimText.trim()) {
+            noteEl.textContent = `Listening: ${interimText.trim()}`;
+          }
+
+          for (const text of finalTexts) {
+            sendTranscript(text, false)
+              .then(() => {
+                hasUnflushedSpeech = true;
+                schedulePauseFlush();
+                triggerBackgroundRefresh();
+              })
+              .catch((err) => {
+                noteEl.textContent = `Send failed: ${String(err)}`;
+              });
+          }
+        };
+      }
+
+      async function saveRemember(createReminder) {
+        const text = rememberText.value.trim();
+        if (!text) {
+          rememberStatus.textContent = "Please enter a note first.";
+          return;
+        }
+        const payload = {
+          text,
+          create_reminder: createReminder,
+          due_at: rememberDue.value.trim() || null,
+          priority: rememberPriority.value
+        };
+        const res = await fetch(`/patients/${currentPatientId()}/remember`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          rememberStatus.textContent = `Save failed (${res.status}).`;
+          return;
+        }
+        rememberText.value = "";
+        rememberStatus.textContent = createReminder ? "Saved as note + reminder." : "Saved as memory note.";
+        await Promise.all([refreshMemory(), refreshEvents(), refreshReminders(), refreshContext()]);
+      }
+
+      function initRememberControls() {
+        const saveNoteBtn = document.getElementById("save-note");
+        const saveReminderBtn = document.getElementById("save-reminder");
+        saveNoteBtn.addEventListener("click", () => saveRemember(false));
+        saveReminderBtn.addEventListener("click", () => saveRemember(true));
+        reminderStatusFilter.addEventListener("change", () => {
+          refreshReminders();
+        });
+
+        remindersEl.addEventListener("click", (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) {
+            return;
+          }
+          const action = target.getAttribute("data-reminder-action");
+          const reminderId = target.getAttribute("data-reminder-id");
+          if (!action || !reminderId) {
+            return;
+          }
+          updateReminderStatus(reminderId, action);
+        });
+      }
+
+      function initWebSocket() {
+        const protocol = location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(`${protocol}://${location.host}/ws/alerts`);
+        ws.onopen = () => {
+          wsStatusEl.textContent = "connected";
+          wsStatusEl.style.color = "#1f8a5b";
+          ws.send("hello");
+        };
+        ws.onclose = () => {
+          wsStatusEl.textContent = "disconnected";
+          wsStatusEl.style.color = "#c0392b";
+          setTimeout(initWebSocket, 3000);
+        };
+        ws.onmessage = async (event) => {
+          const payload = JSON.parse(event.data);
+          if (payload.event === "alert:new") {
+            await refreshAlerts();
+          }
+        };
+      }
+
+      async function init() {
+        initMicControls();
+        initRememberControls();
+        await Promise.all([refreshAlerts(), refreshEvents(), refreshReminders(), refreshMemory(), refreshContext()]);
+        setInterval(refreshMemory, 5000);
+        setInterval(refreshEvents, 5000);
+        setInterval(refreshReminders, 5000);
+        setInterval(refreshContext, 5000);
+        setInterval(refreshAlerts, 5000);
+        initWebSocket();
+      }
+      init();
+    </script>
+  </body>
+</html>
