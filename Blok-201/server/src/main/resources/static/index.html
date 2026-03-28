@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DementiaAid</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/auth.css" />
+    <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+
+<div id="authPage">
+    <div class="auth-wrap">
+        <div class="auth-left">
+            <div class="logo">Dementia<span>Aid</span></div>
+            <div class="auth-hero">
+                <h1>Gentle care for people with demencia</h1>
+                <p>Supporting people living with early-stage dementia, and the custodians who walk alongside them.</p>
+            </div>
+            <div class="auth-pills">
+                <div class="auth-pill">
+                    <div class="pill-dot s1"></div>
+                    <div><strong>Stage 1</strong> — Full independence and direct access to all features.</div>
+                </div>
+                <div class="auth-pill">
+                    <div class="pill-dot s2"></div>
+                    <div><strong>Stage 2</strong> — Key actions handled by a trusted custodian.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-right">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Sign In</button>
+                <button class="tab" onclick="switchTab('signup')">Register</button>
+            </div>
+
+            <div id="loginSection" class="form-section active">
+                <div class="form-title">Welcome back</div>
+                <div class="form-sub">Sign in to your DementiaAid account</div>
+                <div class="field">
+                    <label>Username</label>
+                    <input type="text" id="lUser" placeholder="your username" autocomplete="username" />
+                </div>
+                <div class="field">
+                    <label>Password</label>
+                    <input type="password" id="lPass" placeholder="••••••••" autocomplete="current-password" />
+                </div>
+                <button class="btn-primary" onclick="doLogin(this)">Sign In</button>
+                <div class="msg" id="lMsg"></div>
+            </div>
+
+            <div id="signupSection" class="form-section">
+                <div class="form-title">Create account</div>
+                <div class="form-sub">Join DementiaAid as a patient or custodian</div>
+                <div class="field">
+                    <label>Full Name</label>
+                    <input type="text" id="sName" placeholder="Jane Doe" />
+                </div>
+                <div class="field">
+                    <label>Username <span class="req">*</span></label>
+                    <input type="text" id="sUser" placeholder="choose a username" autocomplete="username" />
+                </div>
+                <div class="field">
+                    <label>Password <span class="req">*</span></label>
+                    <input type="password" id="sPass" placeholder="at least 6 characters" autocomplete="new-password" />
+                </div>
+                <div class="field">
+                    <label>I am a <span class="req">*</span></label>
+                    <select id="sRole" onchange="onRoleChange()">
+                        <option value="">— select role —</option>
+                        <option value="USER">Patient</option>
+                        <option value="CAREGIVER">Custodian</option>
+                    </select>
+                </div>
+                <div class="stage-wrap" id="stageWrap">
+                    <label>Dementia stage <span class="req">*</span></label>
+                    <div class="stage-cards">
+                        <div class="stage-card" id="sc1" onclick="selectStage(1)">
+                            <div class="stage-num">1</div>
+                            <div class="stage-lbl">Early stage<br/>Independent access</div>
+                        </div>
+                        <div class="stage-card" id="sc2" onclick="selectStage(2)">
+                            <div class="stage-num">2</div>
+                            <div class="stage-lbl">Moderate stage<br/>Custodian-assisted</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="patient-wrap" id="patientWrap">
+                    <label>Your UUID <span class="req">*</span></label>
+                    <input type="text" id="sPatientId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                </div>
+                <button class="btn-primary" onclick="doSignup(this)">Create Account</button>
+                <div class="msg" id="sMsg"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="dashboard">
+    <div class="topbar">
+        <div class="logo">Dementia<span style="color:var(--teal-light)">Aid</span></div>
+        <div class="topbar-right">
+            <span class="badge" id="dBadge"></span>
+            <span class="topbar-name" id="dName"></span>
+            <button class="btn-logout" onclick="doLogout()">Sign out</button>
+        </div>
+    </div>
+
+    <div class="dash-body">
+        <div class="dash-greeting">
+            <h2 id="dGreeting"></h2>
+            <p id="dSub"></p>
+        </div>
+
+        <div class="notif-bar" id="notifBar">
+            <span>Enable notifications to receive reminders when your tasks are due.</span>
+            <button onclick="requestNotifPermission()">Enable</button>
+        </div>
+
+        <div class="dash-hint" id="dashHint"></div>
+
+        <div class="cal-section" style="margin-top: 28px;">
+            <h3>Your Calendar</h3>
+            <div class="cal-widget">
+                <div class="cal-header">
+                    <div class="cal-month-nav">
+                        <button class="cal-nav-btn" onclick="calMove(-1)">&#8249;</button>
+                        <div>
+                            <div class="cal-month-name" id="calMonthName"></div>
+                            <div class="cal-year" id="calYear"></div>
+                        </div>
+                        <button class="cal-nav-btn" onclick="calMove(1)">&#8250;</button>
+                    </div>
+                    <div class="cal-today-label" id="calTodayLabel"></div>
+                </div>
+                <div class="cal-body">
+                    <div class="cal-dow">
+                        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+                        <span>Thu</span><span>Fri</span><span>Sat</span>
+                    </div>
+                    <div class="cal-grid" id="calGrid"></div>
+                </div>
+                <div class="cal-events">
+                    <div class="cal-events-date" id="calEventsDate"></div>
+                    <div id="calEventsList"></div>
+                </div>
+                <div class="cal-add" id="calAdd">
+                    <div class="cal-add-row">
+                        <input type="text" id="calInput" placeholder="Task description…" maxlength="80"
+                               onkeydown="if(event.key==='Enter') addEvent()" />
+                        <input type="time" id="calTime" />
+                    </div>
+                    <button class="cal-add-btn" onclick="addEvent()">Add task</button>
+                </div>
+                <div class="cal-past-notice" id="calPastNotice" style="display:none;">
+                    Tasks cannot be added to past dates.
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-section" style="margin-top: 24px;">
+            <h3>AI Assistant</h3>
+            <div class="ai-widget">
+                <div class="ai-top-row">
+                    <div class="ai-status" id="aiStatus">AI data is loading...</div>
+                    <button class="ai-refresh" id="aiRefreshBtn">Refresh</button>
+                </div>
+
+                <div class="ai-inputs">
+                    <div class="ai-box">
+                        <div class="ai-box-title">Send transcript text</div>
+                        <textarea id="aiTextInput" placeholder="Example: Tomorrow at 3 PM appointment with Dr. Ivanov, then call Maria and buy aspirin."></textarea>
+                        <div class="ai-row">
+                            <button id="aiSendTextBtn">Analyze text</button>
+                            <span id="aiTextMsg" class="ai-msg"></span>
+                        </div>
+                    </div>
+                    <div class="ai-box">
+                        <div class="ai-box-title">Upload WAV recording</div>
+                        <input type="file" id="aiAudioInput" accept=".wav,audio/wav,audio/x-wav" />
+                        <div class="ai-row">
+                            <button id="aiSendAudioBtn">Transcribe + analyze</button>
+                            <span id="aiAudioMsg" class="ai-msg"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-columns">
+                    <div class="ai-col">
+                        <div class="ai-col-title">Alerts</div>
+                        <div id="aiAlertsList" class="ai-list"></div>
+                    </div>
+                    <div class="ai-col">
+                        <div class="ai-col-title">Reminders</div>
+                        <div id="aiRemindersList" class="ai-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script src="js/state.js?v=20260330"></script>
+<script src="js/notifications.js?v=20260330"></script>
+<script src="js/calendar.js?v=20260330"></script>
+<script src="js/ai.js?v=20260330"></script>
+<script src="js/dashboard.js?v=20260330"></script>
+<script src="js/auth.js?v=20260330"></script>
+</body>
+</html>

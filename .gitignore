@@ -4,5 +4,17 @@ __pycache__/
 .mypy_cache/
 *.pyc
 data/
+src/*.egg-info/
+
+# Environment files
 .env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Local backup of nested repo metadata
+Blok-201.git.backup/
+
 src/*.egg-info/
